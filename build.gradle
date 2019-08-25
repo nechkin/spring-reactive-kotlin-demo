@@ -1,0 +1,72 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url 'https://repo.spring.io/snapshot' }
+        maven { url 'https://repo.spring.io/milestone' }
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+
+    ext {
+        lombokVersion = '1.18.8'
+        kotlinVersion = '1.3.50'
+    }
+}
+
+plugins {
+    id 'org.springframework.boot' version '2.2.0.M4' apply false
+    id "io.freefair.lombok" version "3.8.0"
+    id "org.jetbrains.kotlin.jvm" version '1.3.50'
+    id "org.jetbrains.kotlin.plugin.spring" version '1.3.50'
+//    id("org.jetbrains.kotlin.plugin.jpa") version '1.3.50'
+}
+
+allprojects {
+    apply plugin: 'idea'
+    apply plugin: 'kotlin'
+
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = "1.8"
+        }
+    }
+    compileTestKotlin {
+        kotlinOptions {
+            jvmTarget = "1.8"
+        }
+    }
+
+    repositories {
+        jcenter()
+        mavenCentral()
+        maven { url = "http://packages.confluent.io/maven/" }
+        maven { url = "https://repo.spring.io/libs-milestone" }
+        maven { url = "https://artifacts.elastic.co/maven" }
+    }
+}
+
+subprojects {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'io.freefair.lombok'
+
+    group = 'com.demo'
+    version = '1.0.0-SNAPSHOT'
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+
+    dependencyManagement {
+        imports {
+            mavenBom SpringBootPlugin.BOM_COORDINATES
+        }
+        dependencies {
+            dependency "org.projectlombok:lombok:${lombokVersion}"
+            dependency "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}"
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
