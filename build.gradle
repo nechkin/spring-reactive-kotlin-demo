@@ -6,20 +6,21 @@ buildscript {
         maven { url 'https://repo.spring.io/snapshot' }
         maven { url 'https://repo.spring.io/milestone' }
         maven { url 'https://plugins.gradle.org/m2/' }
+        maven { url 'https://repo.spring.io/libs-snapshot' }
     }
 
     ext {
         lombokVersion = '1.18.8'
         kotlinVersion = '1.3.50'
+        r2dbcVersion = '1.0.0.M2'
     }
 }
 
 plugins {
-    id 'org.springframework.boot' version '2.2.0.M4' apply false
+    id 'org.springframework.boot' version '2.2.0.M3' apply false
     id "io.freefair.lombok" version "3.8.0"
     id "org.jetbrains.kotlin.jvm" version '1.3.50'
     id "org.jetbrains.kotlin.plugin.spring" version '1.3.50'
-//    id("org.jetbrains.kotlin.plugin.jpa") version '1.3.50'
 }
 
 allprojects {
@@ -50,6 +51,7 @@ subprojects {
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'io.freefair.lombok'
+    apply plugin: "org.jetbrains.kotlin.plugin.spring"
 
     group = 'com.demo'
     version = '1.0.0-SNAPSHOT'
@@ -58,11 +60,23 @@ subprojects {
 
     dependencyManagement {
         imports {
+            mavenBom "io.r2dbc:r2dbc-bom:Arabba-M8"
             mavenBom SpringBootPlugin.BOM_COORDINATES
         }
         dependencies {
             dependency "org.projectlombok:lombok:${lombokVersion}"
             dependency "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}"
+
+            // add these, if boot autoconfig is disabled (they are transitive for spring-boot-starter-data-r2dbc)
+            // dependency "org.springframework.data:spring-data-r2dbc:${r2dbcVersion}"
+            // dependency "io.r2dbc:r2dbc-spi:0.8.0.M8"
+
+            // experimental spring boot support
+//            dependency "io.r2dbc:r2dbc-bom:Arabba-M8"
+            dependency "org.springframework.boot.experimental:spring-boot-starter-data-r2dbc:0.1.0.M1"
+
+            // Actuator support by exposing a reactive ConnectionFactoryHealthIndicator
+            dependency "org.springframework.boot.experimental:spring-boot-actuator-autoconfigure-r2dbc:0.1.0.M1"
         }
     }
 
