@@ -19,6 +19,7 @@ import reactor.core.publisher.SynchronousSink
 import reactor.core.scheduler.Scheduler
 import reactor.core.scheduler.Schedulers
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,6 +34,19 @@ class BenchmarkEndpointConfig {
     fun routesLatencyExperiments(): RouterFunction<ServerResponse> {
         return RouterFunctions
             .route(
+                RequestPredicates.GET("/sse-generate-delay"),
+                HandlerFunction {
+                    ServerResponse
+                        .ok()
+                        .contentType(MediaType.TEXT_EVENT_STREAM)
+                        .body(Flux.generate<String> { sink -> sink.next(Instant.now().toString()) }
+                            .take(2)
+                            .delayElements(Duration.ofMillis(500))
+                            .subscribeOn(scheduler())
+                        )
+                }
+            )
+            .andRoute(
                 RequestPredicates.GET("/sse-generate"),
                 HandlerFunction {
                     var count = 0;
@@ -114,7 +128,7 @@ class BenchmarkEndpointConfig {
             return Flux.fromArray(arrayOf("response", "another"))
         }
 
-        @GetMapping("/blockingMono")
+        @GetMapping("/blocking-mono")
         fun blockingMono(): Mono<String> {
             // Blocking Netty's event loop thread with sleep here
             return Mono.fromCallable {
@@ -123,7 +137,7 @@ class BenchmarkEndpointConfig {
             }
         }
 
-        @GetMapping("/reactiveMono")
+        @GetMapping("/reactive-mono")
         fun reactiveMono(): Mono<String> {
             return Mono.fromCallable {
                 TimeUnit.SECONDS.sleep(1)
@@ -132,11 +146,4 @@ class BenchmarkEndpointConfig {
         }
 
     }
-
-//    companion object {
-//        private fun fetchResponseValues(): Array<String> {
-//            TimeUnit.SECONDS.sleep(1)
-//            return arrayOf()
-//        }
-//    }
 }

@@ -69,7 +69,7 @@ class ReservationServer {
                 RequestPredicates.GET("/reservations"),
                 HandlerFunction { ServerResponse.ok().body(reservationRepository.findAll(), Reservation::class.java) }
             )
-            .andRoute(RequestPredicates.GET("/reservationStream"),
+            .andRoute(RequestPredicates.GET("/reservation-stream"),
                 HandlerFunction {
                     val infiniteProducer = reservationRepository.findAll().repeat()
                     ServerResponse.ok()
