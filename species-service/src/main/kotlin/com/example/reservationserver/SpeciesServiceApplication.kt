@@ -1,12 +1,10 @@
 package com.example.reservationserver
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.autoconfigure.r2dbc.ConnectionFactoryAutoConfiguration
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Import
 import org.springframework.context.event.EventListener
 import org.springframework.data.annotation.Id
 import org.springframework.data.r2dbc.core.DatabaseClient
@@ -19,29 +17,31 @@ import org.springframework.web.reactive.function.server.RouterFunction
 import org.springframework.web.reactive.function.server.RouterFunctions
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.time.Duration
 
-
-data class Reservation(var name: String) {
+data class Species(var name: String) {
     @Id var id: Int? = null
 }
 
-interface ReservationRepository : ReactiveCrudRepository<Reservation, Int>
+data class SpeciesDto(val name: String)
 
-@Import(ConnectionFactoryAutoConfiguration::class)
+interface SpeciesRepository : ReactiveCrudRepository<Species, Int>
+
 @EnableR2dbcRepositories
 @SpringBootApplication
-class ReservationServer {
+class SpeciesServiceApplication {
 
     @Configuration
-    class Initializer(val reservationRepository: ReservationRepository,
+    class Initializer(val speciesRepository: SpeciesRepository,
                       val databaseClient: DatabaseClient ) {
 
         @EventListener(ApplicationReadyEvent::class)
         fun init() {
-            // schema.sql is not working for some reason...
+            // schema.sql is not working for r2dbc, though it should accodring to the docs:
+            // https://github.com/spring-projects-experimental/spring-boot-r2dbc/blob/master/documentation.adoc#initialize-a-database-using-r2dbc
             val createDbFlux = Flux.just(
-                "CREATE TABLE IF NOT EXISTS reservation (id SERIAL PRIMARY KEY, name VARCHAR NOT NULL);")
+                "CREATE TABLE IF NOT EXISTS species (id SERIAL PRIMARY KEY, name VARCHAR NOT NULL);")
                 .flatMap {
                     databaseClient.execute()
                         .sql(it)
@@ -49,37 +49,76 @@ class ReservationServer {
                         .rowsUpdated()
                 }
 
-            val savedReservationsFlux = Flux.just("Andy", "Mr. White", "Ingvar", "Joan", "Starbuxman", "Joshua")
-                .map { Reservation(it) }
-                .flatMap { reservationRepository.save(it) }
+            val savedReservationsFlux = Flux.just("Mus Musculus", "Rattus norvegicus",
+                "Homo sapiens", "Gallus gallus")
+                .map { Species(it) }
+                .flatMap { speciesRepository.save(it) }
 
             createDbFlux
-                .then(reservationRepository.deleteAll())
+                .then(speciesRepository.deleteAll())
                 .thenMany(savedReservationsFlux)
                 .subscribe()
         }
     }
 
     @Configuration
-    class WebConfiguration(val reservationRepository: ReservationRepository) {
+    class WebConfiguration(val speciesRepository: SpeciesRepository) {
 
         @Bean
         fun routes(): RouterFunction<ServerResponse> = RouterFunctions
+
             .route(
-                RequestPredicates.GET("/reservations"),
-                HandlerFunction { ServerResponse.ok().body(reservationRepository.findAll(), Reservation::class.java) }
+                RequestPredicates.GET("/species"),
+                HandlerFunction { ServerResponse.ok().body(speciesRepository.findAll(), Species::class.java) }
             )
-            .andRoute(RequestPredicates.GET("/reservation-stream"),
+
+            .andRoute(RequestPredicates.GET("/species-stream"),
                 HandlerFunction {
-                    val infiniteProducer = reservationRepository.findAll().repeat()
+                    val infiniteProducer = speciesRepository.findAll().repeat()
                     ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_STREAM_JSON)
                         .body(Flux
                             .zip(Flux.interval(Duration.ofSeconds(1)), infiniteProducer)
                             .map { it.getT2() },
-                            Reservation::class.java)
+                            Species::class.java)
                 }
             )
+
+            .andRoute(RequestPredicates.GET("/species/{id}"),
+                HandlerFunction { request ->
+                    val speciesMono = Mono.justOrEmpty(request.pathVariable("id"))
+                        .map(Integer::valueOf)
+                        .flatMap(speciesRepository::findById)
+                    ServerResponse.ok().body(speciesMono, Species::class.java)
+                }
+            )
+
+            .andRoute(RequestPredicates.POST("/species"),
+                HandlerFunction { request ->
+                    val speciesMono = request.bodyToMono(SpeciesDto::class.java)
+                        .map { Species(it.name) }
+                    val savedSpeciesMono = speciesRepository.saveAll(speciesMono)
+                    // or speciesMono.doOnNext {speciesRepository.save(it)}
+                    ServerResponse.ok().body(savedSpeciesMono, Species::class.java)
+                })
+
+            .andRoute(RequestPredicates.PUT("/species/{id}"),
+                HandlerFunction { request ->
+                    val modifiedOrNewEntityMono = Mono.justOrEmpty(request.pathVariable("id"))
+                        .map(Integer::valueOf)
+                        .flatMap(speciesRepository::findById)
+                        .defaultIfEmpty(Species(""))
+                        .flatMap { species ->
+                            request.bodyToMono(SpeciesDto::class.java)
+                                .map {
+                                    species.name = it.name
+                                species
+                                }
+                        }
+
+                    ServerResponse.ok().body(speciesRepository.saveAll(modifiedOrNewEntityMono),
+                        Species::class.java)
+                })
     }
 
     /**
@@ -88,8 +127,8 @@ class ReservationServer {
      */
 
 //    @Bean
-//    fun repository(factory: R2dbcRepositoryFactory): ReservationRepository {
-//        return factory.getRepository(ReservationRepository::class.java)
+//    fun repository(factory: R2dbcRepositoryFactory): SpeciesRepository {
+//        return factory.getRepository(SpeciesRepository::class.java)
 //    }
 //    @Bean
 //    fun factory(client: DatabaseClient): R2dbcRepositoryFactory {
@@ -118,5 +157,5 @@ class ReservationServer {
 }
 
 fun main(args: Array<String>) {
-    runApplication<ReservationServer>(*args)
+    runApplication<SpeciesServiceApplication>(*args)
 }

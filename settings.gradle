@@ -14,6 +14,6 @@ pluginManagement {
 }
 
 rootProject.name = 'spring-reactive-kotlin-demo'
-include 'reservation-server'
-include 'reservation-client'
+include 'species-service'
+include 'species-client'
 include 'server-mvc'

@@ -22,7 +22,8 @@ import java.util.function.Supplier
 class MvcServer {
 
     @RestController
-    class MoreRoutes {
+    class SampleController {
+
         @GetMapping(path = ["/scalar"], produces = [MediaType.APPLICATION_JSON_VALUE])
         internal fun scalar(): String {
             TimeUnit.SECONDS.sleep(1)

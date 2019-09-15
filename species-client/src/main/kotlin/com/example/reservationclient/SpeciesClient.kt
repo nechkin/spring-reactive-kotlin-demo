@@ -1,4 +1,4 @@
-package com.example.client
+package com.example.reservationclient
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -11,10 +11,10 @@ import org.springframework.security.core.userdetails.User
 import org.springframework.security.web.server.SecurityWebFilterChain
 
 
-data class Reservation(val id: Int, val name: String)
+data class Species(val id: Int, val name: String)
 
 @SpringBootApplication
-class ReservationClient {
+class SpeciesClient {
 
     @Bean
     fun authentication() = MapReactiveUserDetailsService(
@@ -42,7 +42,7 @@ class ReservationClient {
                 .and().predicate { Math.random() < .5 }
                 .and().path("/unstable-proxy")
                 .filters { filterSpec -> filterSpec
-                    .setPath("/reservations")
+                    .setPath("/species")
                 }
                 .uri("http://localhost:8080")
             }
@@ -51,5 +51,5 @@ class ReservationClient {
 }
 
 fun main(args: Array<String>) {
-    runApplication<ReservationClient>(*args)
+    runApplication<SpeciesClient>(*args)
 }

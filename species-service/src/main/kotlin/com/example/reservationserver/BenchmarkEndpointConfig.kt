@@ -43,6 +43,7 @@ class BenchmarkEndpointConfig {
                             .take(2)
                             .delayElements(Duration.ofMillis(500))
                             .subscribeOn(scheduler())
+                            // .subscribeOn(Schedulers.elastic())
                         )
                 }
             )

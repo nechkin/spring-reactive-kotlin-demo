@@ -1,7 +1,7 @@
 # Spring boot reactive demo sample
 
 A sample application developed in Kotlin to try out some of Spring's support for reactive programming: WebFlux, 
-Router functions instead of ordinary Handler Mappings, R2DBC reactive relational repositories (with Postgres).
+Router functions (instead of ordinary Handler Mappings), R2DBC reactive relational repository (with Postgres).
 
 ## Run it
 
@@ -69,7 +69,7 @@ reservation-client - the gateway app with basic security (single user set up wit
 
 curl -v -uuser:pass -H"X-CUSTOM-HEADER: value" localhost:8081/unstable-proxy
 
-/unstable-proxy route has a 50% change to succeed (or fail with 404)
+/unstable-proxy is dynamically routed, it has a 50% change to succeed or fail with 404.
 
 ## Some of the technologies used
 
