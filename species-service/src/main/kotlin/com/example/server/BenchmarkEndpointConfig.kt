@@ -1,4 +1,4 @@
-package com.example.reservationserver
+package com.example.server
 
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscription

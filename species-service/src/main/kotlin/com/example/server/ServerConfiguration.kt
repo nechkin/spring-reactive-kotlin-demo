@@ -1,4 +1,4 @@
-package com.example.reservationserver
+package com.example.server
 
 import io.netty.channel.ChannelOption
 import org.springframework.beans.factory.config.BeanPostProcessor

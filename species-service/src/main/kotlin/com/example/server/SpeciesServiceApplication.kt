@@ -1,4 +1,4 @@
-package com.example.reservationserver
+package com.example.server
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -62,7 +62,8 @@ class SpeciesServiceApplication {
     }
 
     @Configuration
-    class WebConfiguration(val speciesRepository: SpeciesRepository) {
+    class WebConfiguration(val speciesRepository: SpeciesRepository,
+                           val speciesService: SpeciesService) {
 
         @Bean
         fun routes(): RouterFunction<ServerResponse> = RouterFunctions
@@ -84,40 +85,35 @@ class SpeciesServiceApplication {
                 }
             )
 
-            .andRoute(RequestPredicates.GET("/species/{id}"),
-                HandlerFunction { request ->
-                    val speciesMono = Mono.justOrEmpty(request.pathVariable("id"))
-                        .map(Integer::valueOf)
-                        .flatMap(speciesRepository::findById)
-                    ServerResponse.ok().body(speciesMono, Species::class.java)
-                }
-            )
-
             .andRoute(RequestPredicates.POST("/species"),
                 HandlerFunction { request ->
-                    val speciesMono = request.bodyToMono(SpeciesDto::class.java)
-                        .map { Species(it.name) }
-                    val savedSpeciesMono = speciesRepository.saveAll(speciesMono)
-                    // or speciesMono.doOnNext {speciesRepository.save(it)}
+                    val savedSpeciesMono = speciesService.create(request.bodyToMono(SpeciesDto::class.java))
                     ServerResponse.ok().body(savedSpeciesMono, Species::class.java)
                 })
 
+
+            .andRoute(RequestPredicates.GET("/species/{id}"),
+                HandlerFunction { request ->
+                    val species = speciesService.read(
+                        Mono.justOrEmpty(request.pathVariable("id")).map(Integer::valueOf))
+                    ServerResponse.ok().body(species, Species::class.java)
+                }
+            )
+
             .andRoute(RequestPredicates.PUT("/species/{id}"),
                 HandlerFunction { request ->
-                    val modifiedOrNewEntityMono = Mono.justOrEmpty(request.pathVariable("id"))
-                        .map(Integer::valueOf)
-                        .flatMap(speciesRepository::findById)
-                        .defaultIfEmpty(Species(""))
-                        .flatMap { species ->
-                            request.bodyToMono(SpeciesDto::class.java)
-                                .map {
-                                    species.name = it.name
-                                species
-                                }
-                        }
+                    val modifiedOrNewEntityMono = speciesService.update(
+                        Mono.justOrEmpty(request.pathVariable("id")).map(Integer::valueOf),
+                        request.bodyToMono(SpeciesDto::class.java)
+                    )
+                    ServerResponse.ok().body(modifiedOrNewEntityMono, Species::class.java)
+                })
 
-                    ServerResponse.ok().body(speciesRepository.saveAll(modifiedOrNewEntityMono),
-                        Species::class.java)
+            .andRoute(RequestPredicates.DELETE("/species/{id}"),
+                HandlerFunction {request ->
+                    val void = speciesService.delete(
+                        Mono.justOrEmpty(request.pathVariable("id")).map(Integer::valueOf))
+                    ServerResponse.ok().build(void)
                 })
     }
 

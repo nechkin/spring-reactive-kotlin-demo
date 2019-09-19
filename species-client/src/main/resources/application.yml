@@ -1,2 +1,2 @@
-server:reservations
+server:
   port: 8081

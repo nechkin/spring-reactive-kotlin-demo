@@ -25,6 +25,45 @@ Postgres Database:
 
 `docker run -d --name postgres-reactive-demo -p 5432:5432 -e POSTGRES_USER=dbuser -e POSTGRES_PASSWORD=dbpass -e POSTGRES_DB=reactive postgres`
 
+Redis (for rate limiter to work):
+
+`docker run -d --name redis-reactive-demo -p 6379:6379 redis:5.0.5`
+
+## CRUD
+
+* List all: curl localhost:8080/species
+* Create: curl -XPOST -H "Content-Type: application/json" -d '{"name":"Test"}' localhost:8080/species
+* Read: curl localhost:8080/species/5
+* Update: curl -XPUT -H "Content-Type: application/json" -d '{"name":"Test2"}' localhost:8080/species/5
+* Delete: 
+
+## Using gateway application
+
+### Proxy for reservation-server
+
+reservation-client - the gateway app with basic security (single user is defined with login "user" and password "pass")
+
+**Dynamic routing**
+
+curl -v -H"X-CUSTOM-HEADER: value" localhost:8081/unstable-proxy
+
+/unstable-proxy is dynamically routed, it has a 50% change to succeed or fail with 404.
+
+**Rate limiter url**
+
+siege -H"Authorization: Basic dXNlcjpwYXNz" -c 1 -r 100 http://localhost:8081/proxy
+
+**Http endpoints that use WebClient to call SpeciesServer**
+
+curl localhost:8081/species-stream/names
+
+curl localhost:8081/species-stream
+
+## Points of interest
+
+species-client: SpeciesRoutesConfig#speciesRoutes - Using retry to continue reading a stream after a connection problem.
+ Try restarting the species-service when `curl localhost:8081/species-stream` is active 
+
 ## Testing latency
 
 The [Siege](https://github.com/JoeDog/siege) benchmarking utility can be used to test some of the apps endpoint:
@@ -60,16 +99,6 @@ To see the number of open file descriptors
 To monitor how threads are doing
 
 > `jconsole`
-
-## Using gateway application
-
-### Proxy for reservation-server
-
-reservation-client - the gateway app with basic security (single user set up with login "user" and password "pass")
-
-curl -v -uuser:pass -H"X-CUSTOM-HEADER: value" localhost:8081/unstable-proxy
-
-/unstable-proxy is dynamically routed, it has a 50% change to succeed or fail with 404.
 
 ## Some of the technologies used
 
