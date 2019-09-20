@@ -1,10 +1,11 @@
-package com.example.client
+package com.example.client.controller
 
+import com.example.client.Species
+import com.example.client.service.WebSpeciesClient
 import org.springframework.cloud.netflix.hystrix.HystrixCommands
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerFunction
 import org.springframework.web.reactive.function.server.RequestPredicates
 import org.springframework.web.reactive.function.server.RouterFunction
@@ -19,32 +20,19 @@ import java.util.function.BiFunction
 
 
 @Configuration
-class SpeciesRoutesConfig(val webClient: WebClient) {
+class SpeciesRoutesConfiguration(val webClient: WebSpeciesClient) {
 
-    fun getSpecies(): Flux<Species> {
-        return this.webClient
-            .get()
-            .uri("http://localhost:8080/species")
-            .retrieve()
-            .bodyToFlux(Species::class.java)
-    }
-
-    fun getSpeciesStream(): Flux<Species> {
-        return this.webClient
-            .get()
-            .uri("http://localhost:8080/species-stream")
-            .accept(MediaType.APPLICATION_STREAM_JSON)
-            .exchange()
-            .flatMapMany { clientResponse -> clientResponse.bodyToFlux(Species::class.java) }
-             .log()
+    companion object {
+        private const val PATH_GET_SPECIES_NAMES = "/species/names"
+        private const val PATH_GET_SPECIES_STREAM = "/species-stream"
     }
 
     @Bean
     fun speciesRoutes(): RouterFunction<ServerResponse> {
         return RouterFunctions.route<ServerResponse>(
-            RequestPredicates.GET("/species/names"),
+            RequestPredicates.GET(PATH_GET_SPECIES_NAMES),
             HandlerFunction { request ->
-                val reservationsNames = getSpecies()
+                val reservationsNames = webClient.getSpecies()
                     .map(Species::name)
                     .map { "$it\n" }
 
@@ -58,25 +46,25 @@ class SpeciesRoutesConfig(val webClient: WebClient) {
                 ServerResponse.ok().body(namesWithBreaker, String::class.java)
             })
             .andRoute(
-                RequestPredicates.GET("/species-stream"),
+                RequestPredicates.GET(PATH_GET_SPECIES_STREAM),
                 HandlerFunction { request ->
 
                     // Trying out retrying and maybe I'll try to retry it on another try
 
                     // Nice retry builders from project Reactor
-                    val retryWhen1 = getSpeciesStream().retryWhen(Retry
+                    val retryWhen1 = webClient.getSpeciesStream().retryWhen(Retry
                         .any<Throwable>()
                         .fixedBackoff(Duration.ofSeconds(1))
                         .retryMax(3))
 
-                    val retryWhen2 = getSpeciesStream().retryWhen(Retry
+                    val retryWhen2 = webClient.getSpeciesStream().retryWhen(Retry
                         .any<Throwable>()
                         .fixedBackoff(Duration.ofSeconds(1))
                         .timeout(Duration.ofSeconds(10)))
 
                     // will retry 3 times (with delay of 1, 2 and 3 seconds between retries) and will not report any
                     // error
-                    val retryWhen3 = getSpeciesStream().retryWhen { errors ->
+                    val retryWhen3 = webClient.getSpeciesStream().retryWhen { errors ->
                         errors
                             .zipWith(Flux.range(1, 3), BiFunction<Throwable, Int, Int> { n, i -> i })
                             .flatMap { retryCount ->
@@ -88,7 +76,7 @@ class SpeciesRoutesConfig(val webClient: WebClient) {
                     // will retry 5 times (with delay of 1, 2, 3... seconds between retries) and will report the
                     // last error from the getSpeciesStream flux. But retry is not reset, so the second error will
                     // continue "when" with the next retryCount after the recovery from the first one
-                    val retryWhen4 = getSpeciesStream().retryWhen { errors -> errors
+                    val retryWhen4 = webClient.getSpeciesStream().retryWhen { errors -> errors
                         .zipWith(Flux.range(1, 6))
                         .flatMap { tuple2 ->
                             val error = tuple2.t1
@@ -105,7 +93,7 @@ class SpeciesRoutesConfig(val webClient: WebClient) {
                     val maxRetries = 5;
                     val retryCount = AtomicInteger(0)
 
-                    val retryWhen5 = getSpeciesStream()
+                    val retryWhen5 = webClient.getSpeciesStream()
                         .doOnNext { retryCount.lazySet(0) }
                         .retryWhen { errors -> errors
                         .flatMap { error ->
@@ -119,7 +107,7 @@ class SpeciesRoutesConfig(val webClient: WebClient) {
                     }
 
                     // same as before but with a helper function
-                    val retryWhen6 = getSpeciesStream().compose(retryWithReset(5))
+                    val retryWhen6 = webClient.getSpeciesStream().compose(retryWithReset(5))
 
                     ServerResponse
                         .ok()

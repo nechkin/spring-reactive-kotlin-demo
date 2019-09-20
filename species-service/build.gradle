@@ -20,4 +20,7 @@ dependencies {
 
     // see EmbeddedDatabaseType
     // implementation group: 'org.springframework', name: 'spring-jdbc', version: '5.1.9.RELEASE'
+
+    // RSocket
+    implementation 'org.springframework.boot:spring-boot-starter-rsocket'
 }

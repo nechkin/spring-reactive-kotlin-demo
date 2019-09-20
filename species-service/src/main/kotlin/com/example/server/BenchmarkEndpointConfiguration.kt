@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @Configuration
-class BenchmarkEndpointConfig {
+class BenchmarkEndpointConfiguration {
     // run fetchResponseValues on a worker thread provided by the scheduler(), not to block netty's event loop thread
     @Bean
     fun scheduler() = Schedulers.fromExecutor(Executors.newScheduledThreadPool(10))

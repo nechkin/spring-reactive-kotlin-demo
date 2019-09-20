@@ -8,4 +8,10 @@ dependencies {
     implementation "org.springframework.cloud:spring-cloud-starter-gateway"
     implementation "org.springframework.cloud:spring-cloud-starter-netflix-hystrix"
     implementation "org.springframework.boot:spring-boot-starter-data-redis-reactive"
+
+    implementation "io.rsocket:rsocket-transport-netty"
+    implementation "io.rsocket:rsocket-core"
+    implementation 'org.springframework.boot:spring-boot-starter-rsocket'
+
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 }

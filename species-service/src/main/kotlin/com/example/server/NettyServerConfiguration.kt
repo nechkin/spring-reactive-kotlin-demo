@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration
 
 
 @Configuration
-class ServerConfiguration {
+class NettyServerConfiguration {
 
     /**
      * An example how to customize netty with Spring Boot

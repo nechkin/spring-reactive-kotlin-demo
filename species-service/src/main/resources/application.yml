@@ -6,3 +6,6 @@ spring:
     url: r2dbc:postgresql://localhost:5432/reactive
     username: dbuser
     password: dbpass
+  rsocket:
+    server:
+      port: 7000
